@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NOMAN CLOTH HOUSE - Autonomous AI Admin Panel</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts - Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #030712; color: #f8fafc; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+
+  <!-- FIREBASE SDK (v10.8.0) INTEGRATION (AUTH + FIRESTORE) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithEmailAndPassword, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      getDocs, 
+      doc, 
+      setDoc, 
+      addDoc, 
+      updateDoc, 
+      deleteDoc, 
+      onSnapshot,
+      query,
+      where 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC1_0S-863Y5Tm6D3eLk_ZA186U-MUIpJM",
+      authDomain: "noman-clouth-house.firebaseapp.com",
+      projectId: "noman-clouth-house",
+      storageBucket: "noman-clouth-house.firebasestorage.app",
+      messagingSenderId: "921836985089",
+      appId: "1:921836985089:web:6305ea5d0cfc24e0cbd900",
+      measurementId: "G-8576NHS6C9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    window.db = db;
+    window.auth = auth;
+    window.fbAdminSDK = { 
+      signInWithEmailAndPassword, 
+      signOut, 
+      onAuthStateChanged, 
+      collection, 
+      getDocs, 
+      doc, 
+      setDoc, 
+      addDoc, 
+      updateDoc, 
+      deleteDoc, 
+      onSnapshot, 
+      query, 
+      where 
+    };
+  </script>
+</head>
+<body class="min-h-screen flex flex-col pb-20 md:pb-0">
+
+  <!-- ADMIN LOGIN SCREEN -->
+  <div id="admin-login-screen" class="fixed inset-0 bg-black z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-blue-600/30 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-6">
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-black text-2xl text-white shadow-lg mx-auto">
+          N
+        </div>
+        <h2 class="text-lg font-extrabold uppercase text-white tracking-wide">NOMAN CLOTH HOUSE</h2>
+        <p class="text-xs text-blue-400 font-semibold">Self-Thinking Autonomous AI Admin</p>
+      </div>
+
+      <form onsubmit="handleAdminAuthLogin(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold mb-1 text-slate-300">Admin Gmail ID *</label>
+          <input type="email" id="login-email" required placeholder="admin123@gmail.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-600 text-white">
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-slate-300">Password *</label>
+          <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-600 text-white">
+        </div>
+
+        <button type="submit" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm">
+          LOGIN TO AUTONOMOUS AI
+        </button>
+        <p id="login-error" class="text-red-400 text-center font-semibold hidden"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN ADMIN DASHBOARD -->
+  <div id="admin-main-app" class="min-h-screen flex flex-col md:flex-row hidden">
+    
+    <!-- DESKTOP SIDEBAR -->
+    <aside class="hidden md:flex w-64 bg-slate-950 border-r border-slate-800 p-4 flex-col justify-between shrink-0">
+      <div>
+        <div class="flex items-center space-x-3 mb-8">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-black text-xl text-white shadow-lg">
+            N
+          </div>
+          <div>
+            <h2 class="text-base font-extrabold uppercase text-white leading-tight">NOMAN ADMIN</h2>
+            <p class="text-[10px] text-blue-400 font-semibold tracking-wider">AGI COMMAND CENTER</p>
+          </div>
+        </div>
+
+        <nav class="space-y-1.5 text-xs font-semibold">
+          <button onclick="switchAdminTab('dashboard')" id="nav-adm-dashboard" class="adm-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-blue-600 text-white shadow">
+            <i class="fa-solid fa-chart-line text-sm"></i> Dashboard
+          </button>
+          <button onclick="switchAdminTab('products')" id="nav-adm-products" class="adm-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:bg-slate-900 hover:text-white transition">
+            <i class="fa-solid fa-shirt text-sm"></i> Products
+          </button>
+          <button onclick="switchAdminTab('orders')" id="nav-adm-orders" class="adm-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:bg-slate-900 hover:text-white transition">
+            <i class="fa-solid fa-boxes-packing text-sm"></i> Orders
+          </button>
+          <button onclick="switchAdminTab('users')" id="nav-adm-users" class="adm-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:bg-slate-900 hover:text-white transition">
+            <i class="fa-solid fa-users text-sm"></i> Customers
+          </button>
+          <button onclick="switchAdminTab('carts')" id="nav-adm-carts" class="adm-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:bg-slate-900 hover:text-white transition">
+            <i class="fa-solid fa-cart-shopping text-sm"></i> Live Carts
+          </button>
+        </nav>
+      </div>
+
+      <div class="pt-4 border-t border-slate-800 space-y-2">
+        <p class="text-[11px] text-slate-400 truncate" id="admin-logged-email">admin123@gmail.com</p>
+        <button onclick="logoutAdmin()" class="w-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold py-2 rounded-xl transition border border-red-500/30">
+          <i class="fa-solid fa-right-from-bracket mr-1"></i> Logout Admin
+        </button>
+      </div>
+    </aside>
+
+    <!-- MOBILE BOTTOM NAVIGATION BAR -->
+    <div class="md:hidden fixed bottom-0 inset-x-0 bg-slate-950 border-t border-slate-800 z-40 px-2 py-2 flex justify-around items-center text-[10px] font-bold text-slate-400 shadow-2xl">
+      <button onclick="switchAdminTab('dashboard')" id="mob-nav-dashboard" class="mob-nav-btn flex flex-col items-center gap-1 text-blue-500">
+        <i class="fa-solid fa-chart-line text-base"></i> Overview
+      </button>
+      <button onclick="switchAdminTab('products')" id="mob-nav-products" class="mob-nav-btn flex flex-col items-center gap-1 hover:text-white">
+        <i class="fa-solid fa-shirt text-base"></i> Products
+      </button>
+      <button onclick="switchAdminTab('orders')" id="mob-nav-orders" class="mob-nav-btn flex flex-col items-center gap-1 hover:text-white">
+        <i class="fa-solid fa-boxes-packing text-base"></i> Orders
+      </button>
+      <button onclick="switchAdminTab('users')" id="mob-nav-users" class="mob-nav-btn flex flex-col items-center gap-1 hover:text-white">
+        <i class="fa-solid fa-users text-base"></i> Users
+      </button>
+      <button onclick="switchAdminTab('carts')" id="mob-nav-carts" class="mob-nav-btn flex flex-col items-center gap-1 hover:text-white">
+        <i class="fa-solid fa-cart-shopping text-base"></i> Carts
+      </button>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-grow p-4 md:p-8 overflow-y-auto pb-28 md:pb-8 bg-black">
+      <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
+        <div>
+          <h1 class="text-xl font-black text-white" id="admin-view-title">Dashboard Overview</h1>
+          <p class="text-xs text-slate-400">Autonomous AGI Command Center powered by Self-Thinking AI.</p>
+        </div>
+
+        <button onclick="openProductModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition active:scale-95">
+          <i class="fa-solid fa-plus text-sm"></i> Add New Product
+        </button>
+      </header>
+
+      <!-- SECTION 1: DASHBOARD OVERVIEW -->
+      <section id="adm-view-dashboard" class="adm-section">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-slate-950 border border-slate-800 p-4 rounded-2xl shadow-sm">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Sales Revenue</span>
+            <h3 class="text-lg font-black text-blue-400 mt-1" id="stat-revenue">Rs 0</h3>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 p-4 rounded-2xl shadow-sm">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Orders</span>
+            <h3 class="text-lg font-black text-white mt-1" id="stat-orders-count">0</h3>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 p-4 rounded-2xl shadow-sm">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Products</span>
+            <h3 class="text-lg font-black text-white mt-1" id="stat-products-count">0</h3>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 p-4 rounded-2xl shadow-sm">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Registered Users</span>
+            <h3 class="text-lg font-black text-white mt-1" id="stat-users-count">0</h3>
+          </div>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+          <h3 class="text-sm font-bold text-white mb-3">Recent Incoming Orders</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold">
+                <tr>
+                  <th class="p-3">Order ID</th>
+                  <th class="p-3">Customer</th>
+                  <th class="p-3">City</th>
+                  <th class="p-3">Amount</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3">Action</th>
+                </tr>
+              </thead>
+              <tbody id="recent-orders-tbody" class="divide-y divide-slate-900"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: PRODUCTS -->
+      <section id="adm-view-products" class="adm-section hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+          <h3 class="text-sm font-bold text-white mb-4">Product Catalog</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="admin-products-grid"></div>
+        </div>
+      </section>
+
+      <!-- SECTION 3: ORDERS -->
+      <section id="adm-view-orders" class="adm-section hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+          <h3 class="text-sm font-bold text-white mb-4">Customer Orders Directory</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold">
+                <tr>
+                  <th class="p-3">Order ID</th>
+                  <th class="p-3">Customer Details</th>
+                  <th class="p-3">Courier</th>
+                  <th class="p-3">Total Cost</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3">Update Status</th>
+                </tr>
+              </thead>
+              <tbody id="full-orders-tbody" class="divide-y divide-slate-900"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: USERS -->
+      <section id="adm-view-users" class="adm-section hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+          <h3 class="text-sm font-bold text-white mb-4">Registered Customers</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold">
+                <tr>
+                  <th class="p-3">Name</th>
+                  <th class="p-3">Contact</th>
+                  <th class="p-3">Saved Address</th>
+                  <th class="p-3">Role</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody" class="divide-y divide-slate-900"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 5: CARTS -->
+      <section id="adm-view-carts" class="adm-section hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+          <h3 class="text-sm font-bold text-white mb-4">Active User Shopping Carts</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="carts-grid"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- FLOATING AI AGENT CHATBOT WIDGET -->
+  <button onclick="toggleAdminAiChat()" class="fixed bottom-20 md:bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white w-14 h-14 rounded-full shadow-2xl z-50 flex items-center justify-center transition active:scale-95 border-2 border-slate-800">
+    <i class="fa-solid fa-wand-magic-sparkles text-xl animate-pulse"></i>
+    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase shadow">AGI</span>
+  </button>
+
+  <!-- AI Agent Chat Window -->
+  <div id="admin-ai-modal" class="fixed inset-x-4 bottom-24 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[420px] h-[520px] bg-slate-950 border border-slate-800 rounded-3xl shadow-2xl z-50 hidden flex-col overflow-hidden">
+    <div class="bg-black text-white p-4 flex items-center justify-between border-b border-slate-800">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow">
+          <i class="fa-solid fa-brain"></i>
+        </div>
+        <div>
+          <h3 class="text-xs font-black uppercase tracking-wider text-white">Noman Self-Thinking AGI</h3>
+          <p class="text-[9px] text-blue-400 font-semibold">Autonomous Admin Control System</p>
+        </div>
+      </div>
+      <button onclick="toggleAdminAiChat()" class="text-slate-400 hover:text-white p-1 text-base">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Chat Messages -->
+    <div id="admin-ai-messages" class="flex-grow p-4 overflow-y-auto space-y-3 bg-slate-950/60 text-xs text-slate-200">
+      <div class="flex items-start space-x-2">
+        <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">AI</div>
+        <div class="bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-slate-800 shadow-sm leading-relaxed space-y-1">
+          <p>Assalam-o-Alaikum Admin! Main aapka <b>Self-Thinking AGI Assistant</b> hoon. 🧠⚡<br>Aap mujhse koi bhi hukum dein—chahe product add karwana ho, sales check karni ho, ya tabs switch karne hon, main khud soch kar execute kar dunga!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Uploaded Preview Box -->
+    <div id="ai-uploaded-preview" class="px-4 py-2 bg-black border-t border-slate-800 hidden flex items-center gap-2">
+      <div class="relative w-12 h-12 rounded-lg overflow-hidden border border-blue-500 shrink-0">
+        <img id="preview-thumb" class="w-full h-full object-cover">
+      </div>
+      <div class="flex-grow text-[11px] text-slate-300 truncate">
+        <span id="preview-filename" class="font-bold text-blue-400">image.jpg</span> attached
+      </div>
+      <button onclick="clearAiImage()" class="text-red-400 hover:text-red-300 p-1 text-xs"><i class="fa-solid fa-trash"></i></button>
+    </div>
+
+    <!-- Chat Input & Gallery Uploader -->
+    <div class="p-3 bg-black border-t border-slate-800 flex items-center gap-2">
+      <input type="file" id="ai-gallery-input" accept="image/*" multiple onchange="handleAiImagesSelected(event)" class="hidden">
+      
+      <button onclick="document.getElementById('ai-gallery-input').click()" class="bg-slate-900 hover:bg-slate-800 text-blue-400 w-10 h-10 rounded-xl flex items-center justify-center shadow transition shrink-0" title="Upload from Gallery">
+        <i class="fa-solid fa-image text-sm"></i>
+      </button>
+
+      <input type="text" id="admin-ai-input" onkeypress="handleAdminAiKeyPress(event)" placeholder="Hukum karein (e.g. Sales report)..." class="flex-grow bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-600">
+      
+      <button onclick="sendAdminAiAgentMessage()" class="bg-blue-600 hover:bg-blue-500 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow transition active:scale-95 shrink-0">
+        <i class="fa-solid fa-paper-plane text-xs"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT PRODUCT MODAL -->
+  <div id="product-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-950 border border-slate-800 text-slate-200 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 my-8">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white" id="modal-title">Add New Product</h3>
+        <button onclick="closeProductModal()" class="text-slate-400 hover:text-white text-lg p-1">&times;</button>
+      </div>
+
+      <form id="product-form" onsubmit="saveProduct(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="edit-doc-id">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1 text-slate-300">Numeric Product ID *</label>
+            <input type="number" id="inp-id" required placeholder="101" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-300">Category *</label>
+            <select id="inp-category" required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white">
+              <option value="Men's Unstitched">Men's Unstitched</option>
+              <option value="Men's Stitched">Men's Stitched</option>
+              <option value="Women's Unstitched">Women's Unstitched</option>
+              <option value="Women's Stitched">Women's Stitched</option>
+              <option value="Men's Shoes">Men's Shoes</option>
+              <option value="Women's Shoes">Women's Shoes</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-slate-300">Product Title *</label>
+          <input type="text" id="inp-title" required placeholder="Product Title" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white">
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block font-semibold mb-1 text-slate-300">Price (PKR) *</label>
+            <input type="number" id="inp-price" required placeholder="2850" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-300">Original Price</label>
+            <input type="number" id="inp-origprice" placeholder="3500" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-300">Rating</label>
+            <input type="number" step="0.1" id="inp-rating" placeholder="4.8" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-slate-300">Image URL *</label>
+          <input type="url" id="inp-image" required placeholder="https://..." class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1 text-slate-300">Badge Label</label>
+            <input type="text" id="inp-badge" placeholder="Best Seller" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-300">Stock Availability *</label>
+            <select id="inp-stockstatus" required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-bold">
+              <option value="In Stock" class="text-blue-400">In Stock</option>
+              <option value="Sold Out" class="text-red-400">Sold Out</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-slate-300">Available Sizes (Comma Separated)</label>
+          <input type="text" id="inp-sizes" placeholder="Standard, Medium, Large" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-slate-300">Description</label>
+          <textarea id="inp-description" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white"></textarea>
+        </div>
+        <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeProductModal()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-xl">Cancel</button>
+          <button type="submit" id="save-btn" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg">Save Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let adminProducts = [];
+    let adminOrders = [];
+    let adminUsers = [];
+    let adminCarts = [];
+    let attachedImageDataUrl = "";
+
+    function escapeChatHtml(text) {
+      if (!text) return "";
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // Check Auth State on Page Load
+    window.onload = function() {
+      const checkSDK = setInterval(() => {
+        if (window.auth && window.fbAdminSDK) {
+          clearInterval(checkSDK);
+          const { onAuthStateChanged } = window.fbAdminSDK;
+          onAuthStateChanged(window.auth, (user) => {
+            if (user) {
+              document.getElementById('admin-login-screen').classList.add('hidden');
+              document.getElementById('admin-main-app').classList.remove('hidden');
+              document.getElementById('admin-logged-email').innerText = user.email;
+              startRealtimeListeners();
+            } else {
+              document.getElementById('admin-login-screen').classList.remove('hidden');
+              document.getElementById('admin-main-app').classList.add('hidden');
+            }
+          });
+        }
+      }, 300);
+    };
+
+    async function handleAdminAuthLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value.trim();
+      const errBox = document.getElementById('login-error');
+      const btn = document.getElementById('login-btn');
+
+      btn.disabled = true;
+      btn.innerText = "AUTHENTICATING...";
+      errBox.classList.add('hidden');
+
+      try {
+        const { signInWithEmailAndPassword, collection, getDocs, query, where } = window.fbAdminSDK;
+        
+        await signInWithEmailAndPassword(window.auth, email, password);
+        const q = query(collection(window.db, "ADMIN"), where("email", "==", email));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          console.log("Admin Authorized successfully!");
+        } else {
+          await window.fbAdminSDK.signOut(window.auth);
+          errBox.innerText = "Access Denied: Email not in Firestore ADMIN collection.";
+          errBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        errBox.innerText = "Auth Error: " + err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "LOGIN TO AUTONOMOUS AI";
+      }
+    }
+
+    async function logoutAdmin() {
+      if(window.auth && window.fbAdminSDK) {
+        await window.fbAdminSDK.signOut(window.auth);
+        location.reload();
+      }
+    }
+
+    function startRealtimeListeners() {
+      const { collection, onSnapshot } = window.fbAdminSDK;
+
+      onSnapshot(collection(window.db, "products"), (snapshot) => {
+        adminProducts = [];
+        snapshot.forEach(docSnap => adminProducts.push({ docId: docSnap.id, ...docSnap.data() }));
+        renderAdminProducts();
+        updateStats();
+      });
+
+      onSnapshot(collection(window.db, "orders"), (snapshot) => {
+        adminOrders = [];
+        snapshot.forEach(docSnap => adminOrders.push({ docId: docSnap.id, ...docSnap.data() }));
+        renderAdminOrders();
+        renderRecentOrders();
+        updateStats();
+      });
+
+      onSnapshot(collection(window.db, "users"), (snapshot) => {
+        adminUsers = [];
+        snapshot.forEach(docSnap => adminUsers.push({ docId: docSnap.id, ...docSnap.data() }));
+        renderAdminUsers();
+        updateStats();
+      });
+
+      onSnapshot(collection(window.db, "cart"), (snapshot) => {
+        adminCarts = [];
+        snapshot.forEach(docSnap => adminCarts.push({ docId: docSnap.id, ...docSnap.data() }));
+        renderAdminCarts();
+      });
+    }
+
+    function switchAdminTab(tabName) {
+      document.querySelectorAll('.adm-section').forEach(sec => sec.classList.add('hidden'));
+      
+      document.querySelectorAll('.adm-nav-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('text-slate-400');
+      });
+
+      document.querySelectorAll('.mob-nav-btn').forEach(btn => {
+        btn.classList.remove('text-blue-500');
+        btn.classList.add('text-slate-400');
+      });
+
+      document.getElementById(`adm-view-${tabName}`).classList.remove('hidden');
+      
+      const deskBtn = document.getElementById(`nav-adm-${tabName}`);
+      if(deskBtn) {
+        deskBtn.classList.remove('text-slate-400');
+        deskBtn.classList.add('bg-blue-600', 'text-white');
+      }
+
+      const mobBtn = document.getElementById(`mob-nav-${tabName}`);
+      if(mobBtn) {
+        mobBtn.classList.remove('text-slate-400');
+        mobBtn.classList.add('text-blue-500');
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('stat-products-count').innerText = adminProducts.length;
+      document.getElementById('stat-orders-count').innerText = adminOrders.length;
+      document.getElementById('stat-users-count').innerText = adminUsers.length;
+      const totalRev = adminOrders.reduce((sum, ord) => sum + (Number(ord.totalCost || ord.subtotal) || 0), 0);
+      document.getElementById('stat-revenue').innerText = `Rs ${totalRev.toLocaleString()}`;
+    }
+
+    function renderAdminProducts() {
+      const grid = document.getElementById('admin-products-grid');
+      if (adminProducts.length === 0) {
+        grid.innerHTML = `<p class="col-span-full text-center text-xs text-slate-500 py-8">No products found.</p>`;
+        return;
+      }
+      grid.innerHTML = adminProducts.map(p => {
+        const isSoldOut = (p.stockStatus || p.stockstatus) === "Sold Out";
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col justify-between p-3 relative shadow-md">
+            <span class="absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded ${isSoldOut ? 'bg-red-500 text-white' : 'bg-blue-600 text-white'} uppercase">${p.stockStatus || p.stockstatus || 'In Stock'}</span>
+            <img src="${p.image}" class="w-full h-36 object-cover rounded-lg mb-2 ${isSoldOut ? 'grayscale' : ''}">
+            <div class="space-y-1">
+              <span class="text-[9px] text-blue-400 font-bold uppercase">${p.category || p.catagory || ''}</span>
+              <h4 class="text-xs font-bold text-white line-clamp-1">${escapeChatHtml(p.title)}</h4>
+              <span class="text-xs font-extrabold text-white">Rs ${(p.price || 0).toLocaleString()}</span>
+            </div>
+            <div class="flex items-center gap-2 mt-3 pt-2 border-t border-slate-800">
+              <button onclick="toggleStock('${p.docId}', '${p.stockStatus || p.stockstatus}')" class="w-full py-1.5 rounded-lg text-[10px] font-bold ${isSoldOut ? 'bg-blue-600/20 text-blue-400' : 'bg-red-600/20 text-red-400'}">
+                ${isSoldOut ? 'Mark In-Stock' : 'Mark Sold-Out'}
+              </button>
+              <button onclick="editProduct('${p.docId}')" class="p-1.5 bg-slate-800 text-slate-200 rounded-lg text-xs"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="deleteProduct('${p.docId}')" class="p-1.5 bg-red-950 text-red-400 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openProductModal() {
+      document.getElementById('product-form').reset();
+      document.getElementById('edit-doc-id').value = "";
+      document.getElementById('modal-title').innerText = "Add New Product";
+      document.getElementById('product-modal').classList.remove('hidden');
+      document.getElementById('product-modal').classList.add('flex');
+    }
+
+    function closeProductModal() {
+      document.getElementById('product-modal').classList.add('hidden');
+      document.getElementById('product-modal').classList.remove('flex');
+    }
+
+    async function saveProduct(e) {
+      e.preventDefault();
+      const docId = document.getElementById('edit-doc-id').value;
+      const rawSizes = document.getElementById('inp-sizes').value;
+      const sizesArr = rawSizes ? rawSizes.split(',').map(s => s.trim()).filter(s => s.length > 0) : ["Standard"];
+
+      const prodData = {
+        id: Number(document.getElementById('inp-id').value),
+        title: document.getElementById('inp-title').value,
+        category: document.getElementById('inp-category').value,
+        catagory: document.getElementById('inp-category').value,
+        price: Number(document.getElementById('inp-price').value),
+        origPrice: Number(document.getElementById('inp-origprice').value) || 0,
+        rating: Number(document.getElementById('inp-rating').value) || 4.8,
+        image: document.getElementById('inp-image').value,
+        badge: document.getElementById('inp-badge').value,
+        stockStatus: document.getElementById('inp-stockstatus').value,
+        stockstatus: document.getElementById('inp-stockstatus').value,
+        sizes: sizesArr,
+        description: document.getElementById('inp-description').value,
+        createat: new Date()
+      };
+
+      const { collection, addDoc, doc, setDoc } = window.fbAdminSDK;
+      if (docId) {
+        await setDoc(doc(window.db, "products", docId), prodData, { merge: true });
+      } else {
+        await addDoc(collection(window.db, "products"), prodData);
+      }
+      closeProductModal();
+    }
+
+    function editProduct(docId) {
+      const p = adminProducts.find(item => item.docId === docId);
+      if(!p) return;
+      document.getElementById('edit-doc-id').value = docId;
+      document.getElementById('modal-title').innerText = "Edit Product";
+      document.getElementById('inp-id').value = p.id || 101;
+      document.getElementById('inp-title').value = p.title || '';
+      document.getElementById('inp-category').value = p.category || p.catagory || "Men's Unstitched";
+      document.getElementById('inp-price').value = p.price || '';
+      document.getElementById('inp-origprice').value = p.origPrice || p.oriprice || '';
+      document.getElementById('inp-rating').value = p.rating || 4.8;
+      document.getElementById('inp-image').value = p.image || '';
+      document.getElementById('inp-badge').value = p.badge || '';
+      document.getElementById('inp-stockstatus').value = p.stockStatus || p.stockstatus || 'In Stock';
+      document.getElementById('inp-sizes').value = (p.sizes && Array.isArray(p.sizes)) ? p.sizes.join(', ') : 'Standard';
+      document.getElementById('inp-description').value = p.description || '';
+
+      document.getElementById('product-modal').classList.remove('hidden');
+      document.getElementById('product-modal').classList.add('flex');
+    }
+
+    async function toggleStock(docId, currentStatus) {
+      const newStatus = (currentStatus === "In Stock") ? "Sold Out" : "In Stock";
+      const { doc, updateDoc } = window.fbAdminSDK;
+      await updateDoc(doc(window.db, "products", docId), { stockStatus: newStatus, stockstatus: newStatus });
+    }
+
+    async function deleteProduct(docId) {
+      if(!confirm("Delete this product?")) return;
+      const { doc, deleteDoc } = window.fbAdminSDK;
+      await deleteDoc(doc(window.db, "products", docId));
+    }
+
+    function renderRecentOrders() {
+      const tbody = document.getElementById('recent-orders-tbody');
+      if (adminOrders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500">No orders yet.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = adminOrders.slice(0, 5).map(o => `
+        <tr class="hover:bg-slate-900/60">
+          <td class="p-3 font-bold text-blue-400">${o.orderId || o.docId}</td>
+          <td class="p-3 font-semibold text-white">${escapeChatHtml(o.customer?.name || '')}</td>
+          <td class="p-3 text-slate-300">${escapeChatHtml(o.customer?.city || '')}</td>
+          <td class="p-3 font-bold text-white">Rs ${(o.totalCost || o.subtotal || 0).toLocaleString()}</td>
+          <td class="p-3"><span class="text-[9px] bg-slate-900 text-amber-400 px-2 py-0.5 rounded">${o.status || 'Confirmed'}</span></td>
+          <td class="p-3"><button onclick="switchAdminTab('orders')" class="text-xs text-blue-400 font-bold">Manage</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAdminOrders() {
+      const tbody = document.getElementById('full-orders-tbody');
+      if (adminOrders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500">No orders.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = adminOrders.map(o => `
+        <tr class="hover:bg-slate-900/60 border-b border-slate-900">
+          <td class="p-3"><span class="font-bold text-blue-400 text-xs">${o.orderId || o.docId}</span></td>
+          <td class="p-3"><p class="font-bold text-white">${escapeChatHtml(o.customer?.name || '')}</p><p class="text-[11px] text-slate-400">${escapeChatHtml(o.customer?.contact || '')}</p></td>
+          <td class="p-3 text-slate-300">${escapeChatHtml(o.courierName || 'Courier')}</td>
+          <td class="p-3 font-extrabold text-white">Rs ${(o.totalCost || o.subtotal || 0).toLocaleString()}</td>
+          <td class="p-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">${o.status || 'Confirmed'}</span></td>
+          <td class="p-3">
+            <select onchange="updateOrderStatus('${o.docId}', this.value)" class="bg-slate-900 border border-slate-800 text-[11px] text-white rounded-lg p-1.5">
+              <option value="" disabled selected>Change Status</option>
+              <option value="Order Confirmed">Order Confirmed</option>
+              <option value="Dispatched (In Transit)">Dispatched</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function updateOrderStatus(docId, newStatus) {
+      const { doc, updateDoc } = window.fbAdminSDK;
+      await updateDoc(doc(window.db, "orders", docId), { status: newStatus });
+    }
+
+    function renderAdminUsers() {
+      const tbody = document.getElementById('users-tbody');
+      if (adminUsers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500">No users.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = adminUsers.map(u => `
+        <tr class="hover:bg-slate-900/60">
+          <td class="p-3 font-bold text-white">${escapeChatHtml(u.name || 'User')}</td>
+          <td class="p-3 text-blue-400">${escapeChatHtml(u.contact || u.uid || '')}</td>
+          <td class="p-3 text-slate-400 text-[11px]">${escapeChatHtml(u.savedAddress?.address || '')}, ${escapeChatHtml(u.savedAddress?.city || '')}</td>
+          <td class="p-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900 text-slate-300">${u.role || 'customer'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAdminCarts() {
+      const grid = document.getElementById('carts-grid');
+      if (adminCarts.length === 0) {
+        grid.innerHTML = `<p class="col-span-full text-center text-xs text-slate-500 py-8">No active carts.</p>`;
+        return;
+      }
+      grid.innerHTML = adminCarts.map(c => `
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs space-y-2">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+            <span class="font-bold text-blue-400">${c.userId || c.docId}</span>
+            <span class="text-[10px] text-slate-500">${(c.items || []).length} Items</span>
+          </div>
+          <div class="space-y-1">
+            ${(c.items || []).map(i => `
+              <div class="flex justify-between text-[11px] text-slate-300">
+                <span>${i.qty}x ${escapeChatHtml(i.title)} (${i.size})</span>
+                <span class="font-bold">Rs ${(i.price * i.qty).toLocaleString()}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ============================================================================
+    // SELF-THINKING AGI AGENT & AUTONOMOUS COMMAND SYSTEM
+    // ============================================================================
+    function toggleAdminAiChat() {
+      const modal = document.getElementById('admin-ai-modal');
+      if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.getElementById('admin-ai-input').focus();
+      } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    function handleAdminAiKeyPress(e) {
+      if (e.key === 'Enter') {
+        sendAdminAiAgentMessage();
+      }
+    }
+
+    function handleAiImagesSelected(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(uploadEvent) {
+        attachedImageDataUrl = uploadEvent.target.result;
+        document.getElementById('preview-thumb').src = attachedImageDataUrl;
+        document.getElementById('preview-filename').innerText = file.name;
+        document.getElementById('ai-uploaded-preview').classList.remove('hidden');
+        document.getElementById('ai-uploaded-preview').classList.add('flex');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearAiImage() {
+      attachedImageDataUrl = "";
+      document.getElementById('ai-gallery-input').value = "";
+      document.getElementById('ai-uploaded-preview').classList.add('hidden');
+      document.getElementById('ai-uploaded-preview').classList.remove('flex');
+    }
+
+    async function sendAdminAiAgentMessage() {
+      const input = document.getElementById('admin-ai-input');
+      const msgContainer = document.getElementById('admin-ai-messages');
+      const rawText = input.value.trim();
+      if (!rawText && !attachedImageDataUrl) return;
+
+      const currentImg = attachedImageDataUrl;
+      const userMsg = rawText || "Is image se naya product add karo";
+      const clean = userMsg.toLowerCase();
+
+      // Render Admin Message
+      msgContainer.innerHTML += `
+        <div class="flex items-start justify-end space-x-2">
+          <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm max-w-[80%] leading-relaxed space-y-2">
+            ${currentImg ? `<img src="${currentImg}" class="w-24 h-24 object-cover rounded-lg border border-blue-400">` : ''}
+            <p>${escapeChatHtml(rawText)}</p>
+          </div>
+        </div>
+      `;
+
+      input.value = "";
+      clearAiImage();
+      msgContainer.scrollTop = msgContainer.scrollHeight;
+
+      // Simulate Self-Thinking AGI Execution
+      setTimeout(async () => {
+        let aiReply = "";
+
+        // ==========================================
+        // CAPABILITY 1: AUTONOMOUS TAB NAVIGATION
+        // ==========================================
+        if (clean.includes("dashboard kholo") || clean.includes("home page") || clean.includes("overview")) {
+          switchAdminTab('dashboard');
+          aiReply = `✅ Main khud soch kar <b>Dashboard Overview</b> tab par aa gaya hoon!`;
+        } else if (clean.includes("product") && (clean.includes("kholo") || clean.includes("dikhao") || clean.includes("dekho")) && !currentImg) {
+          switchAdminTab('products');
+          aiReply = `✅ Main khud navigate karke <b>Product Catalog</b> par le aaya hoon!`;
+        } else if (clean.includes("order") && (clean.includes("kholo") || clean.includes("dikhao"))) {
+          switchAdminTab('orders');
+          aiReply = `✅ Main khud <b>Orders & Delivery</b> tab khol chuka hoon!`;
+        } else if (clean.includes("user") || clean.includes("customer")) {
+          switchAdminTab('users');
+          aiReply = `✅ <b>Customers List</b> open kar di gayi hai!`;
+        } else if (clean.includes("cart")) {
+          switchAdminTab('carts');
+          aiReply = `✅ <b>Live Carts</b> tab par switch kar diya hai!`;
+        }
+
+        // ==========================================
+        // CAPABILITY 2: SALES & DATA ANALYTICS
+        // ==========================================
+        else if (clean.includes("sales") || clean.includes("revenue") || clean.includes("kamai") || clean.includes("profit")) {
+          const totalRev = adminOrders.reduce((sum, ord) => sum + (Number(ord.totalCost || ord.subtotal) || 0), 0);
+          aiReply = `📊 <b>Self-Calculated Store Analytics:</b><br>• Total Orders: <b>${adminOrders.length}</b><br>• Total Revenue: <span class="text-blue-400 font-bold">Rs ${totalRev.toLocaleString()}</span><br>• Total Products Live: <b>${adminProducts.length}</b>`;
+        }
+
+        // ==========================================
+        // CAPABILITY 3: SMART PRODUCT CREATION & UPLOAD (Default if image or product intent)
+        // ==========================================
+        else {
+          // Intelligent Category Decider
+          let selectedCategory = "Men's Unstitched";
+          const isWomen = clean.includes("women") || clean.includes("lady") || clean.includes("ladies") || clean.includes("female") || clean.includes("lawn") || clean.includes("kurti") || clean.includes("girl") || clean.includes("heels");
+          const isMen = clean.includes("men") || clean.includes("gents") || clean.includes("male") || clean.includes("mardaana") || clean.includes("boy");
+          const isStitched = clean.includes("stitched") || clean.includes("kurta") || clean.includes("ready") || clean.includes("silai");
+          const isShoes = clean.includes("shoe") || clean.includes("joota") || clean.includes("sneaker") || clean.includes("slipper") || clean.includes("chappal") || clean.includes("loafer") || clean.includes("khussa") || clean.includes("heel") || clean.includes("footwear");
+
+          if (isShoes) {
+            selectedCategory = (isWomen || clean.includes("women shoes") || clean.includes("ladies shoes") || clean.includes("heel")) ? "Women's Shoes" : "Men's Shoes";
+          } else if (isWomen) {
+            selectedCategory = isStitched ? "Women's Stitched" : "Women's Unstitched";
+          } else if (isMen || (!isWomen && !isShoes)) {
+            selectedCategory = isStitched ? "Men's Stitched" : "Men's Unstitched";
+          }
+
+          // Price Extractor
+          const numMatch = userMsg.match(/\d+/g);
+          let extractedPrice = isShoes ? 2999 : 2500; 
+          if (numMatch) {
+            let parsedNum = parseInt(numMatch.join(''), 10);
+            if (parsedNum < 300) parsedNum *= 100;
+            extractedPrice = parsedNum;
+          }
+
+          // Rich Title Generator
+          let cleanedInputText = rawText.replace(/\d+/g, "").replace(/price|Rs|pkr|wala|wali|add|product|suit|stitched|unstitched|shoes|joota|sneaker/gi, "").trim();
+          let autoTitle = "";
+          const prefixes = ["Royal", "Signature", "Executive", "Luxury", "Classic", "Designer Special"];
+          const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+
+          if (isShoes) {
+            let shoeType = cleanedInputText ? cleanedInputText.charAt(0).toUpperCase() + cleanedInputText.slice(1) : "Premium Casual";
+            autoTitle = `${randomPrefix} ${shoeType} ${selectedCategory.includes("Women") ? "Women's Footwear" : "Men's Sneaker Shoes"}`;
+          } else if (selectedCategory.includes("Unstitched")) {
+            let fabricTone = cleanedInputText ? cleanedInputText.charAt(0).toUpperCase() + cleanedInputText.slice(1) : "Exclusive Lawn & Cotton";
+            autoTitle = `${randomPrefix} ${fabricTone} Unstitched 3-Piece Suit`;
+          } else if (selectedCategory.includes("Stitched")) {
+            let wearStyle = cleanedInputText ? cleanedInputText.charAt(0).toUpperCase() + cleanedInputText.slice(1) : "Trendy Designer";
+            autoTitle = `${randomPrefix} ${wearStyle} Ready-to-Wear Kurti`;
+          } else {
+            autoTitle = cleanedInputText ? `${randomPrefix} ${cleanedInputText.charAt(0).toUpperCase() + cleanedInputText.slice(1)}` : `${randomPrefix} Noman Exclusive Edition`;
+          }
+
+          // Description Generator
+          let autoDescription = "";
+          const uniqueBatchId = Math.floor(100 + Math.random() * 900);
+
+          if (selectedCategory.includes("Shoes")) {
+            autoDescription = `👟 [Batch #${uniqueBatchId}] Premium Comfort Footwear - Next Level Style!\n• 🛡️ High-grade durable material aur anti-slip rubber sole ki mukammal guarantee.\n• ✨ Feather-weight aur ultra-soft cushioning jo sara din paon ko aaram de.\n• 🎯 Casual, Sports ya Formal wear ke sath 100% perfect match.\n• 📦 Fast Cash on Delivery across Pakistan sirf Noman Cloth House par! 🚚🔥`;
+          } else if (selectedCategory.includes("Unstitched")) {
+            autoDescription = `🌟 [Batch #${uniqueBatchId}] Exclusive Fresh Arrival - Superior Fabric Quality!\n• 🧵 100% Guaranteed Pure Cotton & Lawn Blend jo de garmi me thandak aur rahat.\n• 🎨 Premium Fast Colors jo dhoone ke baad bhi bilkul naye jaise rahein.\n• ✂️ Full length generous cutting (Shirt + Trouser + Dupatta) apni marzi ki design banwane ke liye.\n• 🇵🇰 Fast COD delivery across Pakistan! 🚚`;
+          } else {
+            autoDescription = `🔥 [Batch #${uniqueBatchId}] Ready-to-Wear Masterpiece - Trendsetters Choice!\n• ✨ Nafis aur mazboot stitching jo aapki personality ko nikhaar de.\n• 💎 Ultra-soft skin friendly fabric jo sara din pehanne me behad comfortable ho.\n• 🎯 Wedding, Party ya Casual gathering ke liye 100% supreme choice.\n• 📦 Abhi order confirm karein aur ghar baithe fast delivery payein! ⚡`;
+          }
+
+          const newProductObj = {
+            id: Math.floor(1000 + Math.random() * 9000),
+            title: autoTitle,
+            category: selectedCategory,
+            catagory: selectedCategory,
+            price: extractedPrice,
+            origPrice: Math.round(extractedPrice * 1.35),
+            rating: 4.9,
+            image: currentImg || "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500",
+            badge: isShoes ? "Trending Footwear" : "AGI Signature",
+            stockStatus: "In Stock",
+            stockstatus: "In Stock",
+            sizes: isShoes ? ["Size 40", "Size 41", "Size 42", "Size 43", "Size 44"] : (selectedCategory.includes("Unstitched") ? ["Standard (4 Meters Cut)"] : ["Small (S)", "Medium (M)", "Large (L)", "XL"]),
+            description: autoDescription,
+            createat: new Date()
+          };
+
+          try {
+            const { collection, addDoc } = window.fbAdminSDK;
+            await addDoc(collection(window.db, "products"), newProductObj);
+
+            aiReply = `🧠 <b>Self-Thinking AGI Success! Product Live Ho Gaya Hai:</b><br><br>
+            • <b>Category:</b> <span class="text-blue-400 font-bold">${newProductObj.category}</span><br>
+            • <b>Generated Title:</b> <b>${newProductObj.title}</b><br>
+            • <b>Price:</b> Rs ${newProductObj.price.toLocaleString()}<br>
+            • <b>Description Preview:</b><br><div class="bg-black p-2.5 rounded-xl border border-slate-800 text-[11px] text-slate-300 whitespace-pre-line mt-1">${newProductObj.description}</div><br>
+            🚀 <i>Autonomous execution complete, Firebase Firestore & Frontend store par live sync ho gaya!</i>`;
+          } catch(err) {
+            aiReply = `❌ Firebase Sync Error: ${err.message}`;
+          }
+        }
+
+        msgContainer.innerHTML += `
+          <div class="flex items-start space-x-2">
+            <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">AI</div>
+            <div class="bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-slate-800 shadow-sm text-slate-200 leading-relaxed space-y-1">
+              <p>${aiReply}</p>
+            </div>
+          </div>
+        `;
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+      }, 600);
+    }
+  </script>
+</body>
+</html>
