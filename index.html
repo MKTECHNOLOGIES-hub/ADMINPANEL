@@ -207,8 +207,8 @@
               <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold">
                 <tr>
                   <th class="p-3">Order ID</th>
-                  <th class="p-3">Customer</th>
-                  <th class="p-3">City</th>
+                  <th class="p-3">Customer Details</th>
+                  <th class="p-3">City & Address</th>
                   <th class="p-3">Amount</th>
                   <th class="p-3">Status</th>
                   <th class="p-3">Action</th>
@@ -231,17 +231,17 @@
       <!-- SECTION 3: ORDERS -->
       <section id="adm-view-orders" class="adm-section hidden">
         <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
-          <h3 class="text-sm font-bold text-white mb-4">Customer Orders Directory</h3>
+          <h3 class="text-sm font-bold text-white mb-4">Customer Orders Directory (Complete Details)</h3>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs text-slate-300">
               <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold">
                 <tr>
-                  <th class="p-3">Order ID</th>
-                  <th class="p-3">Customer Details</th>
-                  <th class="p-3">Courier</th>
-                  <th class="p-3">Total Cost</th>
-                  <th class="p-3">Status</th>
-                  <th class="p-3">Update Status</th>
+                  <th class="p-3">Order ID & Date</th>
+                  <th class="p-3">Customer Profile</th>
+                  <th class="p-3">Delivery Address & City</th>
+                  <th class="p-3">Courier & Cost</th>
+                  <th class="p-3">Ordered Items</th>
+                  <th class="p-3">Status / Action</th>
                 </tr>
               </thead>
               <tbody id="full-orders-tbody" class="divide-y divide-slate-900"></tbody>
@@ -424,13 +424,37 @@
     let adminUsers = [];
     let adminCarts = [];
     let attachedImageDataUrl = "";
+    let previousOrdersCount = -1;
+
+    // Audio Synthesizer for "Ting!" Alert Notification on New Orders
+    function playOrderNotificationTing() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+        osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.15); // High pitch ring
+
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
+      } catch(e) {
+        console.log("Audio alert notification log:", e);
+      }
+    }
 
     function escapeChatHtml(text) {
       if (!text) return "";
       return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
-    // Check Auth State on Page Load
     window.onload = function() {
       const checkSDK = setInterval(() => {
         if (window.auth && window.fbAdminSDK) {
@@ -505,6 +529,13 @@
       onSnapshot(collection(window.db, "orders"), (snapshot) => {
         adminOrders = [];
         snapshot.forEach(docSnap => adminOrders.push({ docId: docSnap.id, ...docSnap.data() }));
+        
+        // Trigger Ting! alert on new incoming orders
+        if (previousOrdersCount !== -1 && adminOrders.length > previousOrdersCount) {
+          playOrderNotificationTing();
+        }
+        previousOrdersCount = adminOrders.length;
+
         renderAdminOrders();
         renderRecentOrders();
         updateStats();
@@ -676,11 +707,17 @@
       tbody.innerHTML = adminOrders.slice(0, 5).map(o => `
         <tr class="hover:bg-slate-900/60">
           <td class="p-3 font-bold text-blue-400">${o.orderId || o.docId}</td>
-          <td class="p-3 font-semibold text-white">${escapeChatHtml(o.customer?.name || '')}</td>
-          <td class="p-3 text-slate-300">${escapeChatHtml(o.customer?.city || '')}</td>
+          <td class="p-3">
+            <p class="font-bold text-white">${escapeChatHtml(o.customer?.name || 'Customer')}</p>
+            <p class="text-[10px] text-blue-400 font-mono">${escapeChatHtml(o.customer?.contact || '')}</p>
+          </td>
+          <td class="p-3">
+            <p class="text-slate-200 font-semibold">${escapeChatHtml(o.customer?.city || '')}</p>
+            <p class="text-[10px] text-slate-400 line-clamp-1">${escapeChatHtml(o.customer?.address || '')} (Postal: ${escapeChatHtml(o.customer?.postal || '')})</p>
+          </td>
           <td class="p-3 font-bold text-white">Rs ${(o.totalCost || o.subtotal || 0).toLocaleString()}</td>
           <td class="p-3"><span class="text-[9px] bg-slate-900 text-amber-400 px-2 py-0.5 rounded">${o.status || 'Confirmed'}</span></td>
-          <td class="p-3"><button onclick="switchAdminTab('orders')" class="text-xs text-blue-400 font-bold">Manage</button></td>
+          <td class="p-3"><button onclick="switchAdminTab('orders')" class="text-xs text-blue-400 font-bold">Full Details</button></td>
         </tr>
       `).join('');
     }
@@ -692,16 +729,40 @@
         return;
       }
       tbody.innerHTML = adminOrders.map(o => `
-        <tr class="hover:bg-slate-900/60 border-b border-slate-900">
-          <td class="p-3"><span class="font-bold text-blue-400 text-xs">${o.orderId || o.docId}</span></td>
-          <td class="p-3"><p class="font-bold text-white">${escapeChatHtml(o.customer?.name || '')}</p><p class="text-[11px] text-slate-400">${escapeChatHtml(o.customer?.contact || '')}</p></td>
-          <td class="p-3 text-slate-300">${escapeChatHtml(o.courierName || 'Courier')}</td>
-          <td class="p-3 font-extrabold text-white">Rs ${(o.totalCost || o.subtotal || 0).toLocaleString()}</td>
-          <td class="p-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">${o.status || 'Confirmed'}</span></td>
+        <tr class="hover:bg-slate-900/60 border-b border-slate-900 align-top">
           <td class="p-3">
-            <select onchange="updateOrderStatus('${o.docId}', this.value)" class="bg-slate-900 border border-slate-800 text-[11px] text-white rounded-lg p-1.5">
-              <option value="" disabled selected>Change Status</option>
-              <option value="Order Confirmed">Order Confirmed</option>
+            <span class="font-bold text-blue-400 text-xs block">${o.orderId || o.docId}</span>
+            <span class="text-[10px] text-slate-400">${o.date || ''}</span>
+          </td>
+          <td class="p-3">
+            <p class="font-bold text-white text-xs">${escapeChatHtml(o.customer?.name || 'Customer Name')}</p>
+            <p class="text-[11px] text-blue-400 font-mono font-semibold">${escapeChatHtml(o.customer?.contact || '')}</p>
+          </td>
+          <td class="p-3 space-y-0.5">
+            <p class="font-bold text-slate-200 text-xs"><i class="fa-solid fa-location-dot text-emerald-500 mr-1"></i> ${escapeChatHtml(o.customer?.city || '')}</p>
+            <p class="text-[11px] text-slate-300">${escapeChatHtml(o.customer?.address || '')}</p>
+            <p class="text-[10px] text-slate-400 font-mono">Postal Code: ${escapeChatHtml(o.customer?.postal || '')}</p>
+          </td>
+          <td class="p-3 space-y-0.5">
+            <span class="text-[11px] font-extrabold text-white block">Rs ${(o.totalCost || o.subtotal || 0).toLocaleString()}</span>
+            <span class="text-[10px] text-emerald-400 font-semibold block"><i class="fa-solid fa-truck text-[9px] mr-1"></i> ${escapeChatHtml(o.courierName || 'Courier')}</span>
+            <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded inline-block font-bold">COD</span>
+          </td>
+          <td class="p-3">
+            <div class="space-y-1 bg-black/40 p-2 rounded-xl border border-slate-800 max-w-xs">
+              ${(o.items || []).map(i => `
+                <div class="flex justify-between text-[11px] text-slate-300 gap-2">
+                  <span class="line-clamp-1"><b>${i.qty}x</b> ${escapeChatHtml(i.title)} <span class="text-slate-400">(${i.size})</span></span>
+                  <span class="font-bold shrink-0">Rs ${(i.price * i.qty).toLocaleString()}</span>
+                </div>
+              `).join('')}
+            </div>
+          </td>
+          <td class="p-3 space-y-2">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 block text-center">${o.status || 'Confirmed'}</span>
+            <select onchange="updateOrderStatus('${o.docId}', this.value)" class="w-full bg-slate-900 border border-slate-800 text-[11px] text-white rounded-lg p-1.5">
+              <option value="" disabled selected>Update Status</option>
+              <option value="Order Confirmed (Pending Dispatch)">Order Confirmed</option>
               <option value="Dispatched (In Transit)">Dispatched</option>
               <option value="Delivered">Delivered</option>
               <option value="Cancelled">Cancelled</option>
@@ -809,7 +870,6 @@
       const userMsg = rawText || "Is image se naya product add karo";
       const clean = userMsg.toLowerCase();
 
-      // Render Admin Message
       msgContainer.innerHTML += `
         <div class="flex items-start justify-end space-x-2">
           <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm max-w-[80%] leading-relaxed space-y-2">
@@ -823,13 +883,9 @@
       clearAiImage();
       msgContainer.scrollTop = msgContainer.scrollHeight;
 
-      // Simulate Self-Thinking AGI Execution
       setTimeout(async () => {
         let aiReply = "";
 
-        // ==========================================
-        // CAPABILITY 1: AUTONOMOUS TAB NAVIGATION
-        // ==========================================
         if (clean.includes("dashboard kholo") || clean.includes("home page") || clean.includes("overview")) {
           switchAdminTab('dashboard');
           aiReply = `✅ Main khud soch kar <b>Dashboard Overview</b> tab par aa gaya hoon!`;
@@ -845,24 +901,12 @@
         } else if (clean.includes("cart")) {
           switchAdminTab('carts');
           aiReply = `✅ <b>Live Carts</b> tab par switch kar diya hai!`;
-        }
-
-        // ==========================================
-        // CAPABILITY 2: SALES & DATA ANALYTICS
-        // ==========================================
-        else if (clean.includes("sales") || clean.includes("revenue") || clean.includes("kamai") || clean.includes("profit")) {
+        } else if (clean.includes("sales") || clean.includes("revenue") || clean.includes("kamai") || clean.includes("profit")) {
           const totalRev = adminOrders.reduce((sum, ord) => sum + (Number(ord.totalCost || ord.subtotal) || 0), 0);
           aiReply = `📊 <b>Self-Calculated Store Analytics:</b><br>• Total Orders: <b>${adminOrders.length}</b><br>• Total Revenue: <span class="text-blue-400 font-bold">Rs ${totalRev.toLocaleString()}</span><br>• Total Products Live: <b>${adminProducts.length}</b>`;
-        }
-
-        // ==========================================
-        // CAPABILITY 3: SMART PRODUCT CREATION & UPLOAD (Default if image or product intent)
-        // ==========================================
-        else {
-          // Intelligent Category Decider
+        } else {
           let selectedCategory = "Men's Unstitched";
           const isWomen = clean.includes("women") || clean.includes("lady") || clean.includes("ladies") || clean.includes("female") || clean.includes("lawn") || clean.includes("kurti") || clean.includes("girl") || clean.includes("heels");
-          const isMen = clean.includes("men") || clean.includes("gents") || clean.includes("male") || clean.includes("mardaana") || clean.includes("boy");
           const isStitched = clean.includes("stitched") || clean.includes("kurta") || clean.includes("ready") || clean.includes("silai");
           const isShoes = clean.includes("shoe") || clean.includes("joota") || clean.includes("sneaker") || clean.includes("slipper") || clean.includes("chappal") || clean.includes("loafer") || clean.includes("khussa") || clean.includes("heel") || clean.includes("footwear");
 
@@ -870,11 +914,10 @@
             selectedCategory = (isWomen || clean.includes("women shoes") || clean.includes("ladies shoes") || clean.includes("heel")) ? "Women's Shoes" : "Men's Shoes";
           } else if (isWomen) {
             selectedCategory = isStitched ? "Women's Stitched" : "Women's Unstitched";
-          } else if (isMen || (!isWomen && !isShoes)) {
+          } else {
             selectedCategory = isStitched ? "Men's Stitched" : "Men's Unstitched";
           }
 
-          // Price Extractor
           const numMatch = userMsg.match(/\d+/g);
           let extractedPrice = isShoes ? 2999 : 2500; 
           if (numMatch) {
@@ -883,7 +926,6 @@
             extractedPrice = parsedNum;
           }
 
-          // Rich Title Generator
           let cleanedInputText = rawText.replace(/\d+/g, "").replace(/price|Rs|pkr|wala|wali|add|product|suit|stitched|unstitched|shoes|joota|sneaker/gi, "").trim();
           let autoTitle = "";
           const prefixes = ["Royal", "Signature", "Executive", "Luxury", "Classic", "Designer Special"];
@@ -902,7 +944,6 @@
             autoTitle = cleanedInputText ? `${randomPrefix} ${cleanedInputText.charAt(0).toUpperCase() + cleanedInputText.slice(1)}` : `${randomPrefix} Noman Exclusive Edition`;
           }
 
-          // Description Generator
           let autoDescription = "";
           const uniqueBatchId = Math.floor(100 + Math.random() * 900);
 
